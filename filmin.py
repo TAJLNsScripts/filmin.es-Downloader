@@ -171,7 +171,9 @@ def do_episode(episode_id, series_name, season_name):
     response = requests.get('https://www.filmin.es/player/data/episode/' + episode_id + '/' + version, cookies=cookies, headers=headers)
     
     try:
-        sources = json.loads(response.content)['sources']
+        data = json.loads(response.content)
+        
+        sources = data['sources']
         
         for s in sources:
             if s['profile'] == 'dash+https+widevine':
@@ -185,6 +187,20 @@ def do_episode(episode_id, series_name, season_name):
         quit()
     
     do_cdm(manifest_url, licence_url, series_name, season_name, episode_name)
+    
+    try:
+        subtitles = data['subtitles']
+        for s in subtitles:
+            iso_code = s['iso_code']
+            sub_url = s['file']
+            
+            f = open('./Downloads/' + series_name + '/' + season_name + '/' + episode_name + ' ' + iso_code + '.srt', "w", encoding="utf-8")
+            f.write(requests.get(sub_url).text.replace('\n', ''))
+            f.close()
+    
+    except Exception as e:
+        print('Error getting movie subtitle')
+        print(e)
 
 def do_movie(movie_id, title):
     
@@ -207,7 +223,8 @@ def do_movie(movie_id, title):
     response = requests.get('https://www.filmin.es/player/data/film/' + movie_id + '/' + version, cookies=cookies, headers=headers)
         
     try:
-        sources = json.loads(response.content)['sources']
+        data = json.loads(response.content)
+        sources = data['sources']
         
         for s in sources:
             if s['profile'] == 'dash+https+widevine':
@@ -221,6 +238,19 @@ def do_movie(movie_id, title):
         quit()
         
     do_cdm(manifest_url, licence_url, title, '', title)
+
+    try:
+        subtitles = data['subtitles']
+        for s in subtitles:
+            iso_code = s['iso_code']
+            sub_url = s['file']
+            
+            f = open('./Downloads/' + title + '/' + title + ' ' + iso_code + '.srt', "w", encoding="utf-8")
+            f.write(requests.get(sub_url).text.replace('\n', ''))
+            f.close()
+    except Exception as e:
+        print('Error getting movie subtitle')
+        print(e)
 
 #https://www.filmin.es/wapi/medias/serie/castigo
 
