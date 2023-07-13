@@ -72,25 +72,30 @@ def do_cdm(manifest_url, license_url, series_name, season_name, episode_name):
     print("    Key: " + fkeys)
     
     print('    Downloading')
-    subprocess.run(['N_m3u8DL-RE.exe', '--save-dir', 'Downloads/' + season_name, '--key', fkeys, '--save-name', episode_name, '-sv', 'best',  '-sa', 'best', manifest_url, '-M', 'mp4'])
+    subprocess.run(['N_m3u8DL-RE.exe', '--save-dir', 'Downloads/' + series_name + '/' + season_name, '--key', fkeys, '--save-name', episode_name, '-sv', 'best',  '-sa', 'best', manifest_url, '-M', 'mp4'])
     
 
 def request_url(url):
 
     name = url.rsplit('/', 1)[-1]
 
+    if 'serie' in url:
+        media_type = 'serie'
+    else:
+        media_type = 'film'
+
     headers = {
         'x-requested-with': 'XMLHttpRequest',
     }
 
-    response = requests.get('https://www.filmin.es/wapi/medias/serie/' + name, cookies=cookies, headers=headers)
+    response = requests.get('https://www.filmin.es/wapi/medias/' + media_type +'/' + name, cookies=cookies, headers=headers)
     
     try:
         data = json.loads(response.content)['data']
         
         r = {}
-        r['series_id'] = str(data['id'])
-        r['series_name'] = data['title']
+        r['id'] = str(data['id'])
+        r['title'] = data['title']
         
         return r
     except:
@@ -173,16 +178,56 @@ def do_episode(episode_id, series_name, season_name):
     
     do_cdm(manifest_url, licence_url, series_name, season_name, episode_name)
 
+def do_movie(movie_id, title):
+    
+    #Stage 1
+    headers = {
+        'x-requested-with': 'XMLHttpRequest',
+    }
+
+    response = requests.get('https://www.filmin.es/player/data/film/42566', cookies=cookies, headers=headers)
+
+    try:
+        media = json.loads(response.content)['media']
+        version = str(media['versions'][0]['id'])
+    except:
+        print('Error getting movie version')
+        print(response)
+        quit()
+
+    #Stage 2
+    response = requests.get('https://www.filmin.es/player/data/film/' + movie_id + '/' + version, cookies=cookies, headers=headers)
+        
+    try:
+        sources = json.loads(response.content)['sources']
+        
+        for s in sources:
+            if s['profile'] == 'dash+https+widevine':
+                manifest_url = s['file']
+                licence_url = s['license']
+                break;
+                
+    except:
+        print('Error getting movie sources')
+        print(response)
+        quit()
+        
+    do_cdm(manifest_url, licence_url, title, '', title)
+
 #https://www.filmin.es/wapi/medias/serie/castigo
 
 ascii_clear()
-url = input('Enter series url: ')
-
+url = input('Enter filmin url: ')
 url_request = request_url(url)
-series_id = url_request['series_id']
-series_name = url_request['series_name']
 
-seasons = get_seasons(series_id)
+media_id = url_request['id']
+title = url_request['title']
+
+if 'pelicula' in url:
+    do_movie(media_id, title)
+    quit()
+
+seasons = get_seasons(media_id)
 
 #Season picker
 print('Found ' + str(len(seasons)) +  ' seasons:')
@@ -197,7 +242,7 @@ season_id = str(seasons[choice-1]['id'])
 season_name = 'Season ' + str(seasons[choice-1]['season_number'])
 
 #Episode picker
-episodes = get_episodes(series_id, season_id)
+episodes = get_episodes(media_id, season_id)
 
 ascii_clear()
 print('Found ' + str(len(seasons)) +  ' episodes in ' + season_name + ':')
@@ -222,6 +267,6 @@ if '-' in choice:
         n2 = len(episodes)
     
     for i in range(n1, n2+1):
-        do_episode(str(episodes[i-1]['id']), series_name, season_name)
+        do_episode(str(episodes[i-1]['id']), title, season_name)
 else:
-    do_episode(str(episodes[int(choice)-1]['id']), series_name, season_name)
+    do_episode(str(episodes[int(choice)-1]['id']), title, season_name)
