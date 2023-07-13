@@ -37,6 +37,8 @@ def ascii_clear():
 """)
 
 def do_cdm(manifest_url, license_url, series_name, season_name, episode_name):
+    global quality
+    
     fkeys = ""
 
     manifest = requests.get(manifest_url)
@@ -72,8 +74,13 @@ def do_cdm(manifest_url, license_url, series_name, season_name, episode_name):
     print("    MPD: " + manifest_url)
     print("    Key: " + fkeys)
     
+    if quality is None:
+        quality = 'best'
+    else:
+        quality = 'res="' + quality + '*"'
+    
     print('    Downloading')
-    subprocess.run(['N_m3u8DL-RE.exe', '--save-dir', 'Downloads/' + series_name + '/' + season_name, '--key', fkeys, '--save-name', episode_name, '-sv', 'best',  '-sa', 'best', manifest_url, '-M', 'mp4'])
+    subprocess.run(['N_m3u8DL-RE.exe', '--save-dir', 'Downloads/' + series_name + '/' + season_name, '--key', fkeys, '--save-name', episode_name, '-sv', quality, '-sa', 'best', manifest_url, '-M', 'mp4'])
     
 
 def request_url(url):
@@ -221,8 +228,11 @@ parser = argparse.ArgumentParser()
 parser.add_argument('-u', '--url') 
 parser.add_argument('-s', '--season', type=int) 
 parser.add_argument('-e', '--episode')
+parser.add_argument('-q', '--quality')
 
 args = parser.parse_args()
+
+quality = args.quality
 
 if args.url is None:
     ascii_clear()
