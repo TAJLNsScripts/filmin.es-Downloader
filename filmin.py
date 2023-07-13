@@ -4,6 +4,7 @@ import json
 import base64
 import subprocess
 import os
+import argparse
 from pywidevine.cdm import Cdm
 from pywidevine.device import Device
 from pywidevine.pssh import PSSH
@@ -185,7 +186,7 @@ def do_movie(movie_id, title):
         'x-requested-with': 'XMLHttpRequest',
     }
 
-    response = requests.get('https://www.filmin.es/player/data/film/42566', cookies=cookies, headers=headers)
+    response = requests.get('https://www.filmin.es/player/data/film/' + movie_id, cookies=cookies, headers=headers)
 
     try:
         media = json.loads(response.content)['media']
@@ -194,7 +195,7 @@ def do_movie(movie_id, title):
         print('Error getting movie version')
         print(response)
         quit()
-
+    
     #Stage 2
     response = requests.get('https://www.filmin.es/player/data/film/' + movie_id + '/' + version, cookies=cookies, headers=headers)
         
@@ -216,8 +217,19 @@ def do_movie(movie_id, title):
 
 #https://www.filmin.es/wapi/medias/serie/castigo
 
-ascii_clear()
-url = input('Enter filmin url: ')
+parser = argparse.ArgumentParser()
+parser.add_argument('-u', '--url') 
+parser.add_argument('-s', '--season', type=int) 
+parser.add_argument('-e', '--episode')
+
+args = parser.parse_args()
+
+if args.url is None:
+    ascii_clear()
+    url = input('Enter filmin url: ')
+else:
+    url = args.url
+
 url_request = request_url(url)
 
 media_id = url_request['id']
@@ -229,31 +241,42 @@ if 'pelicula' in url:
 
 seasons = get_seasons(media_id)
 
-#Season picker
-print('Found ' + str(len(seasons)) +  ' seasons:')
+if args.season is None:
+    #Season picker
+    print('Found ' + str(len(seasons)) +  ' seasons:')
 
-i = 1
-for s in seasons:
-    print(str(i) + '. ' + s['_type'] + ' ' + str(s['season_number']))
-    i+=1
+    i = 1
+    for s in seasons:
+        print(str(i) + '. ' + s['_type'] + ' ' + str(s['season_number']))
+        i+=1
 
-choice = int(input('\nChoose season: '))
+    choice = int(input('\nChoose season: '))
+else:
+    choice = args.season
+    
 season_id = str(seasons[choice-1]['id'])
 season_name = 'Season ' + str(seasons[choice-1]['season_number'])
 
-#Episode picker
 episodes = get_episodes(media_id, season_id)
 
-ascii_clear()
-print('Found ' + str(len(seasons)) +  ' episodes in ' + season_name + ':')
+if args.episode is None:
+    if args.season is None:
 
-i = 1
-for e in episodes:
-    print(str(i) + '. S' + str(e['season_number']) + 'E' + str(e['episode_number']) + ' ' + e['title'])
-    i+=1
+        #Episode picker
+        ascii_clear()
+        print('Found ' + str(len(seasons)) +  ' episodes in ' + season_name + ':')
 
-print("\nTo choose more then 1, follow format example: 1-x")
-choice = input('Choose episode: ')
+        i = 1
+        for e in episodes:
+            print(str(i) + '. S' + str(e['season_number']) + 'E' + str(e['episode_number']) + ' ' + e['title'])
+            i+=1
+
+        print("\nTo choose more then 1, follow format example: 1-x")
+        choice = input('Choose episode: ')
+    else:
+        choice = '0-' + str(len(episodes))
+else:
+    choice = args.episode
 
 if '-' in choice:
     choice = choice.split('-')
