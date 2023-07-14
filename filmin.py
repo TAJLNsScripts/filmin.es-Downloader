@@ -74,10 +74,11 @@ def do_cdm(manifest_url, license_url, series_name, season_name, episode_name):
     print("    MPD: " + manifest_url)
     print("    Key: " + fkeys)
     
-    if quality is None:
+    if quality is None or quality == 'best':
         quality = 'best'
     else:
-        quality = 'res="' + quality + '*"'
+        if 'res' not in quality:
+            quality = 'res="' + quality + '*"'
     
     print('    Downloading')
     subprocess.run(['N_m3u8DL-RE.exe', '--save-dir', 'Downloads/' + series_name + '/' + season_name, '--key', fkeys, '--save-name', episode_name, '-sv', quality, '-sa', 'best', manifest_url, '-M', 'mp4'])
